@@ -15,44 +15,106 @@ class ViewController: UIViewController, UITextFieldDelegate {
     @IBOutlet weak var ConvertButtonOutlet: UIButton!
     @IBOutlet weak var ScrollViewOutlet: UIScrollView!
     
-    let alertController = UIAlertController(title: "Invalid input", message: "Please, enter valid positive decimal.", preferredStyle: .alert)
+    let alertController = UIAlertController(
+        title: "Invalid input",
+        message: nil,
+        preferredStyle: .alert
+    )
+    
     let maxInputCharactersCount = 11
-    
     let mainCurrencyName = "XBT"
-    
     let exchangeRates: [(String, Double)] = [
         ("USD", 1_004.00),
         ("CNY", 6_820.50),
         ("EUR", 943.69),
-        ("GBP", 804.21)
+        ("GBP", 804.21),
+        ("RRR", 90),
+        ("RRR", 90),
+        ("RRR", 90),
+        ("RRR", 90),
+        ("RRR", 90),
+        ("RRR", 90),
+        ("RRR", 90),
+        ("RRR", 90),
+        ("RRR", 90),
+        ("RRR", 90),
+        ("RRR", 90),
+        ("RRR", 90)
     ]
     
     var currencyLabels: Array<UILabel> = []
+    let currencyLabelHeight = 21
+    let currencyLabelsDeltaY = 45
     
     override func viewDidLoad() {
-        super.viewDidLoad()
+        prepareView()
+        resetResults()
         
+        super.viewDidLoad()
+    }
+
+    private func prepareView() {
         MainLabelOutlet.text = mainCurrencyName + ":"
         InputTextOutlet.delegate = self
         
+        setKeyboardHide()
+        setDefaultAlertAction()
+        generateLabels()
+    }
+    
+    private func setKeyboardHide() {
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(self.tapGestureAction(_:)))
         view.addGestureRecognizer(tapGesture)
-        
-        let defaultAlertAction = UIAlertAction(title: "OK", style: .default, handler: {(alert: UIAlertAction!) in self.InputTextOutlet.becomeFirstResponder() })
-        alertController.addAction(defaultAlertAction)
-        
-        generateLabels()
-        
-        InputTextOutlet.text = "0"
-        setResults(value: 0)
     }
-
+    
     func tapGestureAction(_ sender: UITapGestureRecognizer) {
         dismissKeyboard()
     }
     
     private func dismissKeyboard() {
         view.endEditing(true)
+    }
+    
+    private func setDefaultAlertAction() {
+        let defaultAlertAction = UIAlertAction(
+            title: "OK",
+            style: .default,
+            handler: {
+                (alert: UIAlertAction!) in
+                self.InputTextOutlet.becomeFirstResponder()
+            }
+        )
+        alertController.addAction(defaultAlertAction)
+    }
+    
+    private func generateLabels() {
+        currencyLabels = []
+        
+        let inputX = InputTextOutlet.frame.origin.x
+        let inputWidth = InputTextOutlet.frame.width
+        
+        let mainLabelX = MainLabelOutlet.frame.origin.x
+        let labelX = Int(trunc(mainLabelX))
+        let labelWidth = Int(trunc(inputX - mainLabelX + inputWidth))
+        
+        var currentY = 0
+        for _ in 1...exchangeRates.count {
+            let newLabel = UILabel(frame: CGRect(x: labelX, y: currentY, width: labelWidth, height: currencyLabelHeight))
+            newLabel.textAlignment = .left
+            newLabel.text = ""
+            
+            currencyLabels.append(newLabel)
+            ScrollViewOutlet.addSubview(newLabel)
+            
+            currentY = currentY + currencyLabelsDeltaY
+        }
+        
+        ScrollViewOutlet.contentSize = CGSize(width: ScrollViewOutlet.contentSize.width, height: CGFloat(currentY))
+    }
+    
+    private func resetResults() {
+        InputTextOutlet.text = "0"
+        setResults(0)
     }
     
     override func didReceiveMemoryWarning() {
@@ -68,44 +130,30 @@ class ViewController: UIViewController, UITextFieldDelegate {
     
     @IBAction func OnConvertTap(_ sender: UIButton) {
         let currentValue = Double(InputTextOutlet.text!)
-        dismissKeyboard()
-        updateResults(value: currentValue)
-    }
-    
-    private func generateLabels() {
-        let inputX = InputTextOutlet.frame.origin.x
-        let inputWidth = InputTextOutlet.frame.width
-        
-        let mainLabelX = MainLabelOutlet.frame.origin.x
-        let labelX = Int(trunc(mainLabelX))
-        let labelWidth = Int(trunc(inputX - mainLabelX + inputWidth))
-        
-        let deltaY = 45
-        var currentY = 0
-        for _ in 1...exchangeRates.count {
-            let newLabel = UILabel(frame: CGRect(x: labelX, y: currentY, width: labelWidth, height: 21))
-            newLabel.textAlignment = .left
-            newLabel.text = ""
-            
-            currencyLabels.append(newLabel)
-            ScrollViewOutlet.addSubview(newLabel)
-            
-            currentY = currentY + deltaY
+        if updateResults(value: currentValue) {
+            dismissKeyboard()
         }
     }
     
-    private func updateResults(value: Double?) {
-        guard let _value = value, _value >= 0
-            else {
-                setResults(value: 0)
-                self.present(alertController, animated: true, completion: nil)
-                return
+    private func updateResults(value: Double?) -> Bool {
+        var result = false
+        if let _value = value {
+            if _value >= 0 {
+                setResults(_value)
+                result = true
+            } else {
+                setResults(0)
+                showErrorMessage("Please, enter positive decimal.")
+            }
+        } else {
+            setResults(0)
+            showErrorMessage("Expected decimal, got string.")
         }
-        setResults(value: _value)
+        return result
     }
     
-    private func setResults(value: Double) {
-        for (i, (currName, exchange)) in exchangeRates.enumerated() {
+    private func setResults(_ value: Double) {
+        for (i, (currName, exchange)) in self.exchangeRates.enumerated() {
             let result = value * exchange
             currencyLabels[i].text = getCurrencyText(name: currName, value: result)
         }
@@ -114,6 +162,11 @@ class ViewController: UIViewController, UITextFieldDelegate {
     private func getCurrencyText(name: String, value: Double) -> String {
         let result = name + ": " + String(value)
         return result
+    }
+    
+    private func showErrorMessage(_ message: String) {
+        self.alertController.setValue(message, forKey: "message")
+        self.present(alertController, animated: true, completion: nil)
     }
 }
 
