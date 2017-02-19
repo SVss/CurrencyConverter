@@ -47,10 +47,10 @@ class ViewController: UIViewController, UITextFieldDelegate {
     let currencyLabelsDeltaY = 45
     
     override func viewDidLoad() {
+        super.viewDidLoad()
+        
         prepareView()
         resetResults()
-        
-        super.viewDidLoad()
     }
 
     private func prepareView() {
@@ -59,7 +59,10 @@ class ViewController: UIViewController, UITextFieldDelegate {
         
         setKeyboardHide()
         setDefaultAlertAction()
-        generateLabels()
+        generateLabels(ScrollViewOutlet)
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(ViewController.keyboardWillShow(notification:)), name: NSNotification.Name.UIKeyboardWillShow, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(ViewController.keyboardWillHide(notification:)), name: NSNotification.Name.UIKeyboardWillHide, object: nil)
     }
     
     private func setKeyboardHide() {
@@ -87,7 +90,7 @@ class ViewController: UIViewController, UITextFieldDelegate {
         alertController.addAction(defaultAlertAction)
     }
     
-    private func generateLabels() {
+    private func generateLabels(_ scrollView: UIScrollView) {
         currencyLabels = []
         
         let inputX = InputTextOutlet.frame.origin.x
@@ -104,17 +107,25 @@ class ViewController: UIViewController, UITextFieldDelegate {
             newLabel.text = ""
             
             currencyLabels.append(newLabel)
-            ScrollViewOutlet.addSubview(newLabel)
+            scrollView.addSubview(newLabel)
             
             currentY = currentY + currencyLabelsDeltaY
         }
         
-        ScrollViewOutlet.contentSize = CGSize(width: ScrollViewOutlet.contentSize.width, height: CGFloat(currentY))
+        scrollView.contentSize = CGSize(width: ScrollViewOutlet.contentSize.width, height: CGFloat(currentY))
     }
     
     private func resetResults() {
         InputTextOutlet.text = "0"
         setResults(0)
+    }
+    
+    func keyboardWillShow(notification: NSNotification) {
+        print("keyboard will show!")
+    }
+    
+    func keyboardWillHide(notification: NSNotification) {
+        print("keyboard will hide!")
     }
     
     override func didReceiveMemoryWarning() {
@@ -129,10 +140,19 @@ class ViewController: UIViewController, UITextFieldDelegate {
     }
     
     @IBAction func OnConvertTap(_ sender: UIButton) {
-        let currentValue = Double(InputTextOutlet.text!)
-        if updateResults(value: currentValue) {
-            dismissKeyboard()
+        if let valueString = InputTextOutlet.text {
+            if valueString.characters.count == 0 {
+                resetResults()
+            } else {
+                let currentValue = Double(valueString)
+                if updateResults(value: currentValue) {
+                    dismissKeyboard()
+                }
+            }
+        } else {
+            showErrorMessage("Input expected.")
         }
+        
     }
     
     private func updateResults(value: Double?) -> Bool {
